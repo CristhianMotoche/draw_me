@@ -4,7 +4,9 @@
   "description": "Creating a canvas with Elm",
   "main": "index.js",
   "scripts": {
-    "test": "elm-test"
+    "test": "elm-test",
+    "build": "elm make src/Canvas.elm --output dist/index.js",
+    "watch": "elm reactor"
   },
   "repository": {
     "type": "git",
