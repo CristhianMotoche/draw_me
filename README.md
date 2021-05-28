@@ -7,10 +7,10 @@ npm install
 
 ## Build
 ```
-npm build
+npm run build
 ```
 
 ## Watch
 ```
-npm watch
+npm run watch
 ```

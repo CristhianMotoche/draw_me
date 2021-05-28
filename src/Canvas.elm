@@ -13,7 +13,7 @@ init : Model
 init = { pos = 0 }
 
 view : Model -> H.Html Msg
-view _ = H.div [] []
+view _ = H.div [] [ H.text "Hello world!" ]
 
 update : Msg -> Model -> Model
 update _ model = model
