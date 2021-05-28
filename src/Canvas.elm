@@ -4,16 +4,26 @@ import Browser
 import Html as H
 
 type alias Model =
-  { pos : Int
+  { currentPoint : Point
   }
 
-type Msg = Move
+type alias Point =
+  { x: Float
+  , y: Float
+  }
+
+type Msg = Paint Point
 
 init : Model
-init = { pos = 0 }
+init = { currentPoint = { x = 0, y = 0 } }
 
 view : Model -> H.Html Msg
-view _ = H.div [] [ H.text "Hello world!" ]
+view model =
+  H.div
+    []
+    [ H.text <| "X" ++ String.fromFloat model.currentPoint.x
+    , H.text <| "Y" ++ String.fromFloat model.currentPoint.y
+    ]
 
 update : Msg -> Model -> Model
 update _ model = model
