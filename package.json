@@ -4,7 +4,7 @@
   "description": "Creating a canvas with Elm",
   "main": "index.js",
   "scripts": {
-    "test": "elm test"
+    "test": "elm-test"
   },
   "repository": {
     "type": "git",
@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/CristhianMotoche/elm-canvas/issues"
   },
-  "homepage": "https://github.com/CristhianMotoche/elm-canvas#readme"
+  "homepage": "https://github.com/CristhianMotoche/elm-canvas#readme",
+  "devDependencies": {
+    "elm-test": "^0.19.1-revision7"
+  }
 }
