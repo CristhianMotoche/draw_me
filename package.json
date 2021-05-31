@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "elm-test",
-    "build": "elm make src/Canvas.elm --output dist/index.js",
+    "build": "elm make src/Main.elm --output dist/index.js",
     "watch": "elm reactor"
   },
   "repository": {
