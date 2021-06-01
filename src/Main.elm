@@ -2,10 +2,13 @@ module Main exposing (..)
 
 import Browser
 import Canvas as C
+import Canvas.Settings as CS
 import Tuple as T
 import Html as H
 import Html.Attributes as HA
 import Html.Events.Extra.Mouse as M
+import Debug
+import Color
 
 type alias Model =
   { currentPoint : Point
@@ -22,18 +25,19 @@ init : Model
 init = { currentPoint = { x = 0, y = 0 } }
 
 view : Model -> H.Html Msg
-view model =
-  C.toHtml (300, 300)
-       [ HA.style "border" "1px solid black"  ]
-       [ C.shapes [] [ C.rect (0, 0) 100 50 ] ]
---    [ M.onDown <|
---        \ev -> Paint { x = T.first ev.clientPos, y = T.second ev.clientPos },
---      HA.width 200,
---      HA.height 100
---    ]
---    [ H.text <| "X" ++ String.fromFloat model.currentPoint.x
---    , H.text <| "Y" ++ String.fromFloat model.currentPoint.y
---    ]
+view { currentPoint } =
+  H.div
+    [ HA.style "display" "flex" ]
+    [ C.toHtml
+        (300, 300)
+        [ M.onDown <|
+            \ev -> Paint { x = T.first ev.offsetPos, y = T.second ev.offsetPos },
+          HA.style "border" "1px solid black"  ]
+        [ C.shapes [ CS.fill (Color.rgb255 100 100 10) ] [ C.rect (currentPoint.x, currentPoint.y) 5 5 ] ]
+    ]
+  --    [ H.text <| "X" ++ String.fromFloat model.currentPoint.x
+  --    , H.text <| "Y" ++ String.fromFloat model.currentPoint.y
+  --    ]
 
 update : Msg -> Model -> Model
 update msg model =
