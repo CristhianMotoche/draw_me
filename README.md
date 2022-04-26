@@ -1,4 +1,6 @@
-# Elm canvas test
+# Draw me
+
+Sort of like pictoline made in Elm. I got the name from the song [Draw me - Sonata Arctica][name-origin].
 
 ## Set up
 ```
@@ -14,3 +16,5 @@ npm run build
 ```
 npm run watch
 ```
+
+[name-origin]: https://www.youtube.com/watch?v=NozBQG_98JU
