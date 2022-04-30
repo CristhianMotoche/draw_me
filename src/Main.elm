@@ -16,28 +16,20 @@ type PaintMode
   | Disabled
 
 type alias Model =
-  { currentPoint : Point
+  { currentPoint : C.Point
   , mode : PaintMode
   }
 
-type alias Point =
-  { x: Float
-  , y: Float
-  }
-
 type Msg
-  = Paint Point
-  | TogglePaintMode
-  | NoOp
+  = StartAt C.Point
+  | MoveAt C.Point
+  | EndAt C.Point
 
 init : Model
 init =
-  { currentPoint = { x = 0, y = 0 }
+  { currentPoint = ( 0, 0 )
   , mode = Disabled
   }
-
-mkPoint : (Float, Float) -> Point
-mkPoint (x, y) = { x = x, y = y }
 
 -- View
 
@@ -47,17 +39,11 @@ view { currentPoint, mode } =
     [ HA.style "display" "flex" ]
     [ C.toHtml
         (300, 300)
-        [ M.onDown <|
-            \_ -> TogglePaintMode,
-          M.onUp <|
-            \_ -> TogglePaintMode,
-          M.onMove <|
-            \ev ->
-              if mode == Enabled
-                 then Paint (mkPoint ev.offsetPos)
-                 else NoOp,
-          HA.style "border" "1px solid black"  ]
-        [ C.shapes [ CS.fill (Color.rgb255 100 100 10) ] [ C.rect (currentPoint.x, currentPoint.y) 5 5 ] ]
+        [ M.onDown (.offsetPos >> StartAt)
+        , M.onUp (.offsetPos >> EndAt)
+        , M.onMove (.offsetPos >> MoveAt)
+        , HA.style "border" "1px solid black"  ]
+        [ C.shapes [ CS.fill (Color.rgb255 100 100 10) ] [ C.rect currentPoint 5 5 ] ]
     ]
 
 -- Update
@@ -65,9 +51,12 @@ view { currentPoint, mode } =
 update : Msg -> Model -> Model
 update msg model =
   case msg of
-    Paint point -> { model | currentPoint = point }
-    TogglePaintMode -> { model | mode = toggle model.mode }
-    NoOp -> model
+    StartAt point -> { model | mode = Enabled }
+    EndAt point -> { model | mode = Disabled }
+    MoveAt point ->
+        if model.mode == Enabled
+        then { model | currentPoint = point }
+        else model
 
 toggle : PaintMode -> PaintMode
 toggle m =
