@@ -3,6 +3,7 @@ module Main exposing (..)
 import Browser
 import Canvas as C
 import Canvas.Settings as CS
+import Canvas.Settings.Line as CSL
 import Tuple as T
 import Html as H
 import Html.Attributes as HA
@@ -16,7 +17,8 @@ type PaintMode
   | Disabled
 
 type alias Model =
-  { currentPoint : C.Point
+  { previousPoint : C.Point
+  , currentPoint : C.Point
   , mode : PaintMode
   }
 
@@ -28,22 +30,36 @@ type Msg
 init : Model
 init =
   { currentPoint = ( 0, 0 )
+  , previousPoint = ( 0, 0 )
   , mode = Disabled
   }
 
+controlPoint (x1 , y1) (x2 , y2) =
+    ((x2 - x1) / 2, (y2 - y1) / 2)
+
 -- View
 
+renderables ((cx, cy) as currentPoint) ((px, py) as previousPoint) =
+    let cp = controlPoint previousPoint currentPoint
+    in [ C.path currentPoint <| [ C.lineTo  previousPoint ] ]
+
 view : Model -> H.Html Msg
-view { currentPoint, mode } =
+view { currentPoint, previousPoint, mode } =
   H.div
     [ HA.style "display" "flex" ]
     [ C.toHtml
-        (300, 300)
+        (500, 500)
         [ M.onDown (.offsetPos >> StartAt)
         , M.onUp (.offsetPos >> EndAt)
         , M.onMove (.offsetPos >> MoveAt)
-        , HA.style "border" "1px solid black"  ]
-        [ C.shapes [ CS.fill (Color.rgb255 100 100 10) ] [ C.rect currentPoint 5 5 ] ]
+        , HA.style "border" "1px solid black"
+        ]
+        [ C.shapes
+             [ CSL.lineCap CSL.RoundCap
+             , CSL.lineWidth 3
+             , (CS.stroke (Color.rgb255 100 100 10))
+             ] (renderables currentPoint previousPoint)
+        ]
     ]
 
 -- Update
@@ -51,11 +67,11 @@ view { currentPoint, mode } =
 update : Msg -> Model -> Model
 update msg model =
   case msg of
-    StartAt point -> { model | mode = Enabled }
-    EndAt point -> { model | mode = Disabled }
+    StartAt point -> { model | mode = Enabled, currentPoint = point, previousPoint = point }
+    EndAt point -> { model | mode = Disabled, currentPoint = point,previousPoint = point }
     MoveAt point ->
         if model.mode == Enabled
-        then { model | currentPoint = point }
+        then { model | currentPoint = point, previousPoint = model.currentPoint }
         else model
 
 toggle : PaintMode -> PaintMode
