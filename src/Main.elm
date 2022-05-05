@@ -8,6 +8,7 @@ import Tuple as T
 import Html as H
 import Html.Attributes as HA
 import Html.Events.Extra.Mouse as M
+import Html.Events as HE
 import Debug
 import Color
 
@@ -15,10 +16,12 @@ import Color
 type PaintMode
   = Enabled
   | Disabled
+  | Cleared
 
 type alias Model =
   { previousPoint : C.Point
   , currentPoint : C.Point
+  , points : List C.Point
   , mode : PaintMode
   }
 
@@ -26,25 +29,34 @@ type Msg
   = StartAt C.Point
   | MoveAt C.Point
   | EndAt C.Point
+  | Clear
 
 init : Model
 init =
   { currentPoint = ( 0, 0 )
   , previousPoint = ( 0, 0 )
+  , points = []
   , mode = Disabled
   }
 
-controlPoint (x1 , y1) (x2 , y2) =
-    ((x2 - x1) / 2, (y2 - y1) / 2)
-
 -- View
 
-renderables ((cx, cy) as currentPoint) ((px, py) as previousPoint) =
-    let cp = controlPoint previousPoint currentPoint
-    in [ C.path currentPoint <| [ C.lineTo  previousPoint ] ]
+-- renderables ((cx, cy) as currentPoint) ((px, py) as previousPoint) =
+--     [ C.path currentPoint <| [ C.lineTo previousPoint ] ]
+
+renderables points =
+    case points of
+        [] -> []
+        (x :: []) -> []
+        (currentPoint :: previousPoint :: xs) ->
+            [ C.path currentPoint <| [ C.lineTo previousPoint ] ]
+            ++ renderables xs
+
+-- renderables  =
+--     [ C.path currentPoint <| [ C.lineTo previousPoint ] ]
 
 view : Model -> H.Html Msg
-view { currentPoint, previousPoint, mode } =
+view ({ currentPoint, previousPoint, mode } as model) =
   H.div
     [ HA.style "display" "flex" ]
     [ C.toHtml
@@ -54,12 +66,15 @@ view { currentPoint, previousPoint, mode } =
         , M.onMove (.offsetPos >> MoveAt)
         , HA.style "border" "1px solid black"
         ]
-        [ C.shapes
+        [ if model.mode == Cleared
+          then C.clear (0, 0) 500 500
+          else C.shapes
              [ CSL.lineCap CSL.RoundCap
              , CSL.lineWidth 3
-             , (CS.stroke (Color.rgb255 100 100 10))
-             ] (renderables currentPoint previousPoint)
+             , CS.stroke (Color.rgb255 100 100 10)
+             ] (renderables model.points)
         ]
+    , H.button [ HE.onClick Clear ][ H.text "Clear" ]
     ]
 
 -- Update
@@ -67,12 +82,21 @@ view { currentPoint, previousPoint, mode } =
 update : Msg -> Model -> Model
 update msg model =
   case msg of
-    StartAt point -> { model | mode = Enabled, currentPoint = point, previousPoint = point }
-    EndAt point -> { model | mode = Disabled, currentPoint = point,previousPoint = point }
+    StartAt point ->
+        { model |
+                  mode = Enabled
+                , points = List.append [point] model.points
+        }
+    EndAt point ->
+        { model |
+                  mode = Disabled
+                , points = []
+        }
     MoveAt point ->
         if model.mode == Enabled
-        then { model | currentPoint = point, previousPoint = model.currentPoint }
+        then { model | points = List.append [point] model.points }
         else model
+    Clear -> { model | mode = Cleared }
 
 toggle : PaintMode -> PaintMode
 toggle m =
