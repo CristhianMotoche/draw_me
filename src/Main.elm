@@ -17,6 +17,7 @@ type PaintMode
   = Enabled
   | Disabled
   | Cleared
+  | Blocked
 
 type alias Model =
   { previousPoint : C.Point
@@ -29,6 +30,7 @@ type Msg
   | MoveAt C.Point
   | EndAt C.Point
   | Clear
+  | Block
 
 init : Model
 init =
@@ -53,7 +55,7 @@ view ({ currentPoint, previousPoint, mode } as model) =
         , M.onMove (.offsetPos >> MoveAt)
         , HA.style "border" "1px solid black"
         ]
-        [ if model.mode == Cleared
+        [ if model.mode == Cleared || model.mode == Blocked
           then C.clear (0, 0) 500 500
           else C.shapes
              [ CSL.lineCap CSL.RoundCap
@@ -62,6 +64,7 @@ view ({ currentPoint, previousPoint, mode } as model) =
              ] (renderables currentPoint previousPoint)
         ]
     , H.button [ HE.onClick Clear ][ H.text "Clear" ]
+    , H.button [ HE.onClick Block ][ H.text "Block" ]
     ]
 
 -- Update
@@ -69,13 +72,23 @@ view ({ currentPoint, previousPoint, mode } as model) =
 update : Msg -> Model -> Model
 update msg model =
   case msg of
-    StartAt point -> { model | mode = Enabled, currentPoint = point, previousPoint = point }
-    EndAt point -> { model | mode = Disabled, currentPoint = point,previousPoint = point }
+    StartAt point ->
+        if model.mode == Blocked
+        then model
+        else { model | mode = Enabled, currentPoint = point, previousPoint = point }
+    EndAt point ->
+        if model.mode == Blocked
+        then model
+        else { model | mode = Disabled, currentPoint = point,previousPoint = point }
     MoveAt point ->
         if model.mode == Enabled
         then { model | currentPoint = point, previousPoint = model.currentPoint }
         else model
-    Clear -> { model | mode = Cleared }
+    Clear ->
+        if model.mode == Blocked
+        then model
+        else { model | mode = Cleared }
+    Block -> { model | mode = Blocked }
 
 toggle : PaintMode -> PaintMode
 toggle m =
