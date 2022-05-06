@@ -21,7 +21,6 @@ type PaintMode
 type alias Model =
   { previousPoint : C.Point
   , currentPoint : C.Point
-  , points : List C.Point
   , mode : PaintMode
   }
 
@@ -35,25 +34,13 @@ init : Model
 init =
   { currentPoint = ( 0, 0 )
   , previousPoint = ( 0, 0 )
-  , points = []
   , mode = Disabled
   }
 
 -- View
 
--- renderables ((cx, cy) as currentPoint) ((px, py) as previousPoint) =
---     [ C.path currentPoint <| [ C.lineTo previousPoint ] ]
-
-renderables points =
-    case points of
-        [] -> []
-        (x :: []) -> []
-        (currentPoint :: previousPoint :: xs) ->
-            [ C.path currentPoint <| [ C.lineTo previousPoint ] ]
-            ++ renderables xs
-
--- renderables  =
---     [ C.path currentPoint <| [ C.lineTo previousPoint ] ]
+renderables ((cx, cy) as currentPoint) ((px, py) as previousPoint) =
+    [ C.path currentPoint <| [ C.lineTo  previousPoint ] ]
 
 view : Model -> H.Html Msg
 view ({ currentPoint, previousPoint, mode } as model) =
@@ -72,7 +59,7 @@ view ({ currentPoint, previousPoint, mode } as model) =
              [ CSL.lineCap CSL.RoundCap
              , CSL.lineWidth 3
              , CS.stroke (Color.rgb255 100 100 10)
-             ] (renderables model.points)
+             ] (renderables currentPoint previousPoint)
         ]
     , H.button [ HE.onClick Clear ][ H.text "Clear" ]
     ]
@@ -82,19 +69,11 @@ view ({ currentPoint, previousPoint, mode } as model) =
 update : Msg -> Model -> Model
 update msg model =
   case msg of
-    StartAt point ->
-        { model |
-                  mode = Enabled
-                , points = List.append [point] model.points
-        }
-    EndAt point ->
-        { model |
-                  mode = Disabled
-                , points = []
-        }
+    StartAt point -> { model | mode = Enabled, currentPoint = point, previousPoint = point }
+    EndAt point -> { model | mode = Disabled, currentPoint = point,previousPoint = point }
     MoveAt point ->
         if model.mode == Enabled
-        then { model | points = List.append [point] model.points }
+        then { model | currentPoint = point, previousPoint = model.currentPoint }
         else model
     Clear -> { model | mode = Cleared }
 
