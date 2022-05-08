@@ -6,6 +6,7 @@ import Canvas.Settings as CS
 import Canvas.Settings.Line as CSL
 import Tuple as T
 import Html as H
+import Time exposing (posixToMillis, every)
 import Html.Attributes as HA
 import Html.Events.Extra.Mouse as M
 import Html.Events as HE
@@ -23,6 +24,7 @@ type alias Model =
   { previousPoint : C.Point
   , currentPoint : C.Point
   , mode : PaintMode
+  , pendingTicks : Int
   }
 
 type Msg
@@ -31,13 +33,15 @@ type Msg
   | EndAt C.Point
   | Clear
   | Block
+  | Tick Int
 
-init : Model
-init =
-  { currentPoint = ( 0, 0 )
+init : flags -> (Model, Cmd Msg)
+init _ =
+  ({ currentPoint = ( 0, 0 )
   , previousPoint = ( 0, 0 )
   , mode = Disabled
-  }
+  , pendingTicks = 60
+  }, Cmd.none)
 
 -- View
 
@@ -47,7 +51,7 @@ renderables ((cx, cy) as currentPoint) ((px, py) as previousPoint) =
 view : Model -> H.Html Msg
 view ({ currentPoint, previousPoint, mode } as model) =
   H.div
-    [ HA.style "display" "flex" ]
+    [ HA.style "display" "flex", HA.style "flex-direction" "column" ]
     [ C.toHtml
         (500, 500)
         [ M.onDown (.offsetPos >> StartAt)
@@ -55,7 +59,7 @@ view ({ currentPoint, previousPoint, mode } as model) =
         , M.onMove (.offsetPos >> MoveAt)
         , HA.style "border" "1px solid black"
         ]
-        [ if model.mode == Cleared || model.mode == Blocked
+        [ if model.mode == Cleared
           then C.clear (0, 0) 500 500
           else C.shapes
              [ CSL.lineCap CSL.RoundCap
@@ -63,32 +67,39 @@ view ({ currentPoint, previousPoint, mode } as model) =
              , CS.stroke (Color.rgb255 100 100 10)
              ] (renderables currentPoint previousPoint)
         ]
-    , H.button [ HE.onClick Clear ][ H.text "Clear" ]
-    , H.button [ HE.onClick Block ][ H.text "Block" ]
+    , H.div
+        []
+        [ H.button [ HE.onClick Clear ][ H.text "Clear" ]
+        , H.p [][ H.text <| "Pending ticks: " ++ String.fromInt model.pendingTicks ]
+        ]
     ]
 
 -- Update
 
-update : Msg -> Model -> Model
+noCmd : Model -> (Model, Cmd Msg)
+noCmd m = (m, Cmd.none)
+
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    StartAt point ->
+    StartAt point -> noCmd <|
         if model.mode == Blocked
         then model
         else { model | mode = Enabled, currentPoint = point, previousPoint = point }
-    EndAt point ->
+    EndAt point -> noCmd <|
         if model.mode == Blocked
         then model
         else { model | mode = Disabled, currentPoint = point,previousPoint = point }
-    MoveAt point ->
+    MoveAt point -> noCmd <|
         if model.mode == Enabled
         then { model | currentPoint = point, previousPoint = model.currentPoint }
         else model
-    Clear ->
+    Clear -> noCmd <|
         if model.mode == Blocked
         then model
         else { model | mode = Cleared }
-    Block -> { model | mode = Blocked }
+    Block -> noCmd { model | mode = Blocked }
+    Tick milis -> noCmd { model | pendingTicks = model.pendingTicks - 1 }
 
 toggle : PaintMode -> PaintMode
 toggle m =
@@ -96,12 +107,20 @@ toggle m =
     Enabled -> Disabled
     _ -> Enabled
 
+
+-- Subs
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    every 1000 (posixToMillis >> Tick)
+
 -- Main
 
 main : Program () Model Msg
 main =
-  Browser.sandbox
+  Browser.element
   { init = init
   , view = view
   , update = update
+  , subscriptions = subscriptions
   }
