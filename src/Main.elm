@@ -32,15 +32,15 @@ type Msg
   | MoveAt C.Point
   | EndAt C.Point
   | Clear
-  | Block
+  | Restart
   | Tick Int
 
 init : flags -> (Model, Cmd Msg)
 init _ =
   ({ currentPoint = ( 0, 0 )
   , previousPoint = ( 0, 0 )
-  , mode = Disabled
-  , pendingTicks = 60
+  , mode = Cleared
+  , pendingTicks = 6
   }, Cmd.none)
 
 -- View
@@ -70,6 +70,7 @@ view ({ currentPoint, previousPoint, mode } as model) =
     , H.div
         []
         [ H.button [ HE.onClick Clear ][ H.text "Clear" ]
+        , H.button [ HE.onClick Restart ][ H.text "Restart" ]
         , H.p [][ H.text <| "Pending ticks: " ++ String.fromInt model.pendingTicks ]
         ]
     ]
@@ -98,8 +99,11 @@ update msg model =
         if model.mode == Blocked
         then model
         else { model | mode = Cleared }
-    Block -> noCmd { model | mode = Blocked }
-    Tick milis -> noCmd { model | pendingTicks = model.pendingTicks - 1 }
+    Restart -> init ()
+    Tick milis ->
+        if model.pendingTicks > 0
+        then noCmd { model | pendingTicks = model.pendingTicks - 1 }
+        else noCmd { model | pendingTicks = 0, mode = Blocked }
 
 toggle : PaintMode -> PaintMode
 toggle m =
@@ -111,8 +115,10 @@ toggle m =
 -- Subs
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    every 1000 (posixToMillis >> Tick)
+subscriptions model =
+    if model.mode == Blocked
+    then Sub.none
+    else every 1000 (posixToMillis >> Tick)
 
 -- Main
 
