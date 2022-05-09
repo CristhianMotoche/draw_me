@@ -40,7 +40,7 @@ init _ =
   ({ currentPoint = ( 0, 0 )
   , previousPoint = ( 0, 0 )
   , mode = Cleared
-  , pendingTicks = 6
+  , pendingTicks = 15
   }, Cmd.none)
 
 -- View
@@ -51,13 +51,18 @@ renderables ((cx, cy) as currentPoint) ((px, py) as previousPoint) =
 view : Model -> H.Html Msg
 view ({ currentPoint, previousPoint, mode } as model) =
   H.div
-    [ HA.style "display" "flex", HA.style "flex-direction" "column" ]
-    [ C.toHtml
+    [ HA.style "display" "flex"
+    , HA.style "flex-direction" "column"
+    , HA.style "width" "500px"
+    , HA.style "height" "500px"
+    , HA.style "border" "1px solid black"
+    ]
+    [
+      C.toHtml
         (500, 500)
         [ M.onDown (.offsetPos >> StartAt)
         , M.onUp (.offsetPos >> EndAt)
         , M.onMove (.offsetPos >> MoveAt)
-        , HA.style "border" "1px solid black"
         ]
         [ if model.mode == Cleared
           then C.clear (0, 0) 500 500
