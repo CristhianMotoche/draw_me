@@ -31,6 +31,7 @@ type Msg
   = StartAt C.Point
   | MoveAt C.Point
   | EndAt C.Point
+  | LeaveAt C.Point
   | Clear
   | Restart
   | Tick Int
@@ -63,6 +64,7 @@ view ({ currentPoint, previousPoint, mode } as model) =
         [ M.onDown (.offsetPos >> StartAt)
         , M.onUp (.offsetPos >> EndAt)
         , M.onMove (.offsetPos >> MoveAt)
+        , M.onLeave (.offsetPos >> LeaveAt)
         ]
         [ if model.mode == Cleared
           then C.clear (0, 0) 500 500
@@ -100,6 +102,7 @@ update msg model =
         if model.mode == Enabled
         then { model | currentPoint = point, previousPoint = model.currentPoint }
         else model
+    LeaveAt point -> noCmd <| { model | mode = Disabled }
     Clear -> noCmd <|
         if model.mode == Blocked
         then model
