@@ -41,13 +41,16 @@ init _ =
   ({ currentPoint = ( 0, 0 )
   , previousPoint = ( 0, 0 )
   , mode = Cleared
-  , pendingTicks = 15
+  , pendingTicks = 30
   }, Cmd.none)
 
 -- View
 
+controlPoint ( x1, y1 ) ( x2, y2 ) =
+    ( x1 + (x2 - x1) / 2, y1 + (y2 - y1) / 2 )
+
 renderables ((cx, cy) as currentPoint) ((px, py) as previousPoint) =
-    [ C.path currentPoint <| [ C.lineTo  previousPoint ] ]
+    [ C.path currentPoint <| [ C.lineTo previousPoint ] ]
 
 view : Model -> H.Html Msg
 view ({ currentPoint, previousPoint, mode } as model) =
@@ -102,7 +105,10 @@ update msg model =
         if model.mode == Enabled
         then { model | currentPoint = point, previousPoint = model.currentPoint }
         else model
-    LeaveAt point -> noCmd <| { model | mode = Disabled }
+    LeaveAt point -> noCmd <|
+        if model.mode == Blocked
+        then model
+        else { model | mode = Disabled, currentPoint = point, previousPoint = point }
     Clear -> noCmd <|
         if model.mode == Blocked
         then model
