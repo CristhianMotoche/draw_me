@@ -4,6 +4,7 @@
   "description": "Creating a canvas with Elm",
   "main": "index.js",
   "scripts": {
+    "co": "cypress open",
     "test": "elm-test",
     "build": "elm make src/Main.elm --output dist/index.js",
     "watch": "elm reactor"
@@ -24,6 +25,7 @@
   },
   "homepage": "https://github.com/CristhianMotoche/elm-canvas#readme",
   "devDependencies": {
+    "cypress": "^9.6.1",
     "elm-test": "^0.19.1-revision7"
   }
 }
