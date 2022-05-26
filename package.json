@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "co": "cypress open",
+    "jest": "jest",
     "test": "elm-test",
     "build": "elm make src/Main.elm --output dist/index.js",
     "watch": "elm reactor"
@@ -25,7 +26,9 @@
   },
   "homepage": "https://github.com/CristhianMotoche/elm-canvas#readme",
   "devDependencies": {
-    "cypress": "^9.6.1",
-    "elm-test": "^0.19.1-revision7"
+    "elm-test": "^0.19.1-revision7",
+    "jest": "^27.0.0",
+    "jest-image-snapshot": "^4.5.1",
+    "puppeteer": "^14.1.1"
   }
 }
