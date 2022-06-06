@@ -20,11 +20,14 @@ type PaintMode
   | Cleared
   | Blocked
 
+type alias DrawingPointer =
+  { previousMidPoint : C.Point, lastPoint : C.Point }
+
 type alias Model =
-  { previousPoint : C.Point
-  , currentPoint : C.Point
+  { currentPoint : C.Point
   , mode : PaintMode
   , pendingTicks : Int
+  , pointer : Maybe DrawingPointer
   }
 
 type Msg
@@ -39,9 +42,9 @@ type Msg
 init : flags -> (Model, Cmd Msg)
 init _ =
   ({ currentPoint = ( 0, 0 )
-  , previousPoint = ( 0, 0 )
   , mode = Cleared
   , pendingTicks = 30
+  , pointer = Nothing
   }, Cmd.none)
 
 -- View
@@ -49,11 +52,11 @@ init _ =
 controlPoint ( x1, y1 ) ( x2, y2 ) =
     ( x1 + (x2 - x1) / 2, y1 + (y2 - y1) / 2 )
 
-renderables ((cx, cy) as currentPoint) ((px, py) as previousPoint) =
-    [ C.path currentPoint <| [ C.lineTo previousPoint ] ]
+renderables currentPoint {previousMidPoint, lastPoint} =
+    [ C.path lastPoint [ C.quadraticCurveTo previousMidPoint currentPoint ] ]
 
 view : Model -> H.Html Msg
-view ({ currentPoint, previousPoint, mode } as model) =
+view ({ currentPoint, mode } as model) =
   H.div
     [ HA.style "display" "flex"
     , HA.style "flex-direction" "column"
@@ -69,13 +72,15 @@ view ({ currentPoint, previousPoint, mode } as model) =
         , M.onMove (.offsetPos >> MoveAt)
         , M.onLeave (.offsetPos >> LeaveAt)
         ]
-        [ if model.mode == Cleared
-          then C.clear (0, 0) 500 500
-          else C.shapes
-             [ CSL.lineCap CSL.RoundCap
-             , CSL.lineWidth 3
-             , CS.stroke (Color.rgb255 100 100 10)
-             ] (renderables currentPoint previousPoint)
+        [ case (model.mode, model.pointer) of
+                (Cleared, _) -> C.clear (0, 0) 500 500
+                (_, Just pointer) ->
+                  C.shapes
+                     [ CSL.lineCap CSL.RoundCap
+                     , CSL.lineWidth 3
+                     , CS.stroke (Color.rgb255 100 100 10)
+                     ] (renderables currentPoint pointer)
+                _ -> C.shapes [] []
         ]
     , H.div
         []
@@ -96,19 +101,19 @@ update msg model =
     StartAt point -> noCmd <|
         if model.mode == Blocked
         then model
-        else { model | mode = Enabled, currentPoint = point, previousPoint = point }
+        else { model | mode = Enabled, currentPoint = point, pointer = Just { lastPoint = point, previousMidPoint = point }}
     EndAt point -> noCmd <|
         if model.mode == Blocked
         then model
-        else { model | mode = Disabled, currentPoint = point,previousPoint = point }
+        else { model | mode = Disabled, currentPoint = point, pointer = Nothing }
     MoveAt point -> noCmd <|
-        if model.mode == Enabled
-        then { model | currentPoint = point, previousPoint = model.currentPoint }
-        else model
+        case model.pointer of
+          Just pointer -> drawPoint point pointer model
+          _ -> model
     LeaveAt point -> noCmd <|
         if model.mode == Blocked
         then model
-        else { model | mode = Disabled, currentPoint = point, previousPoint = point }
+        else { model | mode = Disabled, currentPoint = point, pointer = Nothing }
     Clear -> noCmd <|
         if model.mode == Blocked
         then model
@@ -118,6 +123,11 @@ update msg model =
         if model.pendingTicks > 0
         then noCmd { model | pendingTicks = model.pendingTicks - 1 }
         else noCmd { model | pendingTicks = 0, mode = Blocked }
+
+
+drawPoint newPoint { previousMidPoint, lastPoint } model =
+  let newMidPoint = controlPoint lastPoint newPoint
+  in { model | pointer = Just { previousMidPoint = newMidPoint, lastPoint = model.currentPoint }, currentPoint = newPoint}
 
 toggle : PaintMode -> PaintMode
 toggle m =
