@@ -49,11 +49,15 @@ init _ =
 
 -- View
 
+-- TODO: Review: https://developpaper.com/canvas-advancement-how-to-draw-a-smooth-curve/
 controlPoint ( x1, y1 ) ( x2, y2 ) =
-    ( x1 + (x2 - x1) / 2, y1 + (y2 - y1) / 2 )
+    -- ( x1 + (x2 - x1) / 2, y1 + (y2 - y1) / 2 )
+    ( (x2 + x1) / 2, (y2 + y1) / 2 )
 
-renderables currentPoint {previousMidPoint, lastPoint} =
-    [ C.path lastPoint [ C.quadraticCurveTo previousMidPoint currentPoint ] ]
+renderables currentPoint {lastPoint} =
+    let midPoint = controlPoint lastPoint currentPoint
+    -- in [ C.path lastPoint [ C.lineTo currentPoint ] ]
+    in [ C.path lastPoint [ C.quadraticCurveTo midPoint currentPoint ] ]
 
 view : Model -> H.Html Msg
 view ({ currentPoint, mode } as model) =
