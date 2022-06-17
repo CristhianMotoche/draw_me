@@ -13,7 +13,6 @@ import Html.Events as HE
 import Debug
 import Color
 
-
 type PaintMode
   = Enabled
   | Disabled
@@ -38,6 +37,8 @@ type Msg
   | Clear
   | Restart
   | Tick Int
+  | Start
+  | Join
 
 init : flags -> (Model, Cmd Msg)
 init _ =
@@ -60,7 +61,16 @@ renderables currentPoint {lastPoint} =
     in [ C.path lastPoint [ C.quadraticCurveTo midPoint currentPoint ] ]
 
 view : Model -> H.Html Msg
-view ({ currentPoint, mode } as model) =
+view model =
+  H.div
+  []
+  [ H.div [] [ H.h1 [][H.text"Draw Me"] ]
+  , H.div [] [ H.button [ M.onClick <| \_ -> Start ][H.text"Start"] ]
+  , H.div [] [ H.button [ M.onClick <| \_ -> Join ][H.text"Join"] ]
+  ]
+
+startView : Model -> H.Html Msg
+startView ({ currentPoint, mode } as model) =
   H.div
     [ HA.style "display" "flex"
     , HA.style "flex-direction" "column"
@@ -123,6 +133,8 @@ update msg model =
         then model
         else { model | mode = Cleared }
     Restart -> init ()
+    Start -> noCmd model
+    Join -> noCmd model
     Tick milis ->
         if model.pendingTicks > 0
         then noCmd { model | pendingTicks = model.pendingTicks - 1 }
