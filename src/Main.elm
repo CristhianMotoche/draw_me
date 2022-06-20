@@ -22,11 +22,17 @@ type PaintMode
 type alias DrawingPointer =
   { previousMidPoint : C.Point, lastPoint : C.Point }
 
+type Status =
+  StandBy
+  | Started
+  | Joined
+
 type alias Model =
   { currentPoint : C.Point
   , mode : PaintMode
   , pendingTicks : Int
   , pointer : Maybe DrawingPointer
+  , status : Status
   }
 
 type Msg
@@ -46,6 +52,7 @@ init _ =
   , mode = Cleared
   , pendingTicks = 30
   , pointer = Nothing
+  , status = StandBy
   }, Cmd.none)
 
 -- View
@@ -62,6 +69,12 @@ renderables currentPoint {lastPoint} =
 
 view : Model -> H.Html Msg
 view model =
+  case model.status of
+    Started -> startView model
+    _ -> standByView
+
+standByView : H.Html Msg
+standByView =
   H.div
   []
   [ H.div [] [ H.h1 [][H.text"Draw Me"] ]
@@ -133,7 +146,7 @@ update msg model =
         then model
         else { model | mode = Cleared }
     Restart -> init ()
-    Start -> noCmd model
+    Start -> noCmd { model | status = Started }
     Join -> noCmd model
     Tick milis ->
         if model.pendingTicks > 0

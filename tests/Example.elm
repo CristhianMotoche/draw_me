@@ -18,11 +18,21 @@ start =
 
 startPage : Test
 startPage =
-  test "Start Page" <|
-    \_ ->
-        start
-        |> PT.expectViewHas
-           [ text "Draw Me"
-           , text "Start"
-           , text "Join"
-           ]
+  describe "Start Page"
+  [ test "shows elems in page" <|
+      \_ ->
+        start |>
+          PT.expectViewHas
+          [ text "Draw Me"
+          , text "Start"
+          , text "Join"
+          ]
+  , describe "when clicks on start"
+    [ test "shows canvas" <|
+        \_ ->
+          start
+          |> PT.clickButton "Start"
+          |> PT.expectViewHas
+             [ text "Countdown" ]
+    ]
+  ]
