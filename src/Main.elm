@@ -78,8 +78,8 @@ standByView =
   H.div
   []
   [ H.div [] [ H.h1 [][H.text"Draw Me"] ]
-  , H.div [] [ H.button [ M.onClick <| \_ -> Start ][H.text"Start"] ]
-  , H.div [] [ H.button [ M.onClick <| \_ -> Join ][H.text"Join"] ]
+  , H.div [] [ H.button [ HE.onClick Start ][H.text"Start"] ]
+  , H.div [] [ H.button [ HE.onClick Join ][H.text"Join"] ]
   ]
 
 startView : Model -> H.Html Msg

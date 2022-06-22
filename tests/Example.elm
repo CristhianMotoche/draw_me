@@ -33,6 +33,6 @@ startPage =
           start
           |> PT.clickButton "Start"
           |> PT.expectViewHas
-             [ text "Countdown" ]
+             [ text "Pending ticks: 30" ]
     ]
   ]
