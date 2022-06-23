@@ -41,7 +41,7 @@ type Msg
   | EndAt C.Point
   | LeaveAt C.Point
   | Clear
-  | Restart
+  | Leave
   | Tick Int
   | Start
   | Join
@@ -112,7 +112,7 @@ startView ({ currentPoint, mode } as model) =
     , H.div
         []
         [ H.button [ HE.onClick Clear ][ H.text "Clear" ]
-        , H.button [ HE.onClick Restart ][ H.text "Restart" ]
+        , H.button [ HE.onClick Leave ][ H.text "Leave" ]
         , H.p [][ H.text <| "Pending ticks: " ++ String.fromInt model.pendingTicks ]
         ]
     ]
@@ -145,7 +145,7 @@ update msg model =
         if model.mode == Blocked
         then model
         else { model | mode = Cleared }
-    Restart -> init ()
+    Leave -> init ()
     Start -> noCmd { model | status = Started }
     Join -> noCmd model
     Tick milis ->

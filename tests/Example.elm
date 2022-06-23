@@ -34,5 +34,16 @@ startPage =
           |> PT.clickButton "Start"
           |> PT.expectViewHas
              [ text "Pending ticks: 30" ]
+    , describe "and clicks on leave"
+      [ test "shows Draw me title again" <|
+          \_ ->
+             start
+             |> PT.clickButton "Start"
+             |> PT.clickButton "Leave"
+             |> PT.expectViewHas
+                [ text "Draw Me"
+                , text "Start"
+                ]
+      ]
     ]
   ]
