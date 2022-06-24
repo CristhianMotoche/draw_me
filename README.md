@@ -1,6 +1,6 @@
 # Draw me
 
-Sort of like pictoline made in Elm. I got the name from the song [Draw me - Sonata Arctica][name-origin].
+Sort of like pictionary made in Elm. I got the name from the song [Draw me - Sonata Arctica][name-origin].
 
 ## Requirements
 - [asdf][asdf]

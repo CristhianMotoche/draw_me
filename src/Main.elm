@@ -10,8 +10,15 @@ import Time exposing (posixToMillis, every)
 import Html.Attributes as HA
 import Html.Events.Extra.Mouse as M
 import Html.Events as HE
-import Debug
 import Color
+
+type Eff =
+   NoEff
+
+run : Eff -> Cmd Msg
+run eff =
+  case eff of
+    NoEff -> Cmd.none
 
 type PaintMode
   = Enabled
@@ -46,14 +53,14 @@ type Msg
   | Start
   | Join
 
-init : flags -> (Model, Cmd Msg)
+init : flags -> (Model, Eff)
 init _ =
   ({ currentPoint = ( 0, 0 )
   , mode = Cleared
   , pendingTicks = 30
   , pointer = Nothing
   , status = StandBy
-  }, Cmd.none)
+  }, NoEff)
 
 -- View
 
@@ -119,10 +126,10 @@ startView ({ currentPoint, mode } as model) =
 
 -- Update
 
-noCmd : Model -> (Model, Cmd Msg)
-noCmd m = (m, Cmd.none)
+noCmd : Model -> (Model, Eff)
+noCmd m = (m, NoEff)
 
-update : Msg -> Model -> (Model, Cmd Msg)
+update : Msg -> Model -> (Model, Eff)
 update msg model =
   case msg of
     StartAt point -> noCmd <|
@@ -178,8 +185,8 @@ subscriptions model =
 main : Program () Model Msg
 main =
   Browser.element
-  { init = init
+  { init = \flags -> init flags |> Tuple.mapSecond run
   , view = view
-  , update = update
+  , update = \msg model -> update msg model |> Tuple.mapSecond run
   , subscriptions = subscriptions
   }

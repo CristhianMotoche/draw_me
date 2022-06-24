@@ -3,18 +3,33 @@ module Example exposing (..)
 import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, int, list, string)
 import Test exposing (..)
-import Main exposing (Model, Msg, init, view, update, subscriptions)
+import Main exposing (Eff(..), Model, Msg(..), init, view, update, subscriptions)
 import Test.Html.Selector exposing (text)
 import ProgramTest as PT
+import Debug
+import SimulatedEffect.Cmd as SCmd
+import SimulatedEffect.Sub as SSub
 
-start : PT.ProgramTest Model Msg (Cmd Msg)
+simulatedCmd : Eff -> PT.SimulatedEffect Msg
+simulatedCmd eff =
+  case eff of
+    NoEff -> SCmd.none
+
+simulatedSub : Model -> PT.SimulatedSub Msg
+simulatedSub _ = Debug.todo "wait for simulated Time.every"
+
+start : PT.ProgramTest Model Msg Eff
 start =
   PT.createElement
   { init = init
   , update = update
   , view = view
   }
+  |> PT.withSimulatedEffects simulatedCmd
+  |> PT.withSimulatedSubscriptions simulatedSub
   |> PT.start ()
+
+second = 1000
 
 startPage : Test
 startPage =
@@ -44,6 +59,15 @@ startPage =
                 [ text "Draw Me"
                 , text "Start"
                 ]
+      ]
+    , skip <| describe "and passes 60 seconds"
+      [ test "shows Game Over message" <|
+          \_ ->
+             start
+             |> PT.clickButton "Start"
+             |> PT.advanceTime (60 * second)
+             |> PT.expectViewHas
+                [ text "Game over" ]
       ]
     ]
   ]
