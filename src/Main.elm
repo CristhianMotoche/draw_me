@@ -4,21 +4,32 @@ import Browser
 import Canvas as C
 import Canvas.Settings as CS
 import Canvas.Settings.Line as CSL
-import Tuple as T
 import Html as H
 import Time exposing (posixToMillis, every)
 import Html.Attributes as HA
 import Html.Events.Extra.Mouse as M
 import Html.Events as HE
+import Random as R
 import Color
 
 type Eff =
-   NoEff
+   NoEff | GenWord
+
+
+words : List String
+words =
+  [ "Dog"
+  , "Cat"
+  , "Computer"
+  , "Television"
+  , "Cell phone"
+  ]
 
 run : Eff -> Cmd Msg
 run eff =
   case eff of
     NoEff -> Cmd.none
+    GenWord -> R.generate GeneratedWord <| R.uniform "Hat" words
 
 type PaintMode
   = Enabled
@@ -40,6 +51,7 @@ type alias Model =
   , pendingTicks : Int
   , pointer : Maybe DrawingPointer
   , status : Status
+  , word : Maybe String
   }
 
 type Msg
@@ -47,6 +59,7 @@ type Msg
   | MoveAt C.Point
   | EndAt C.Point
   | LeaveAt C.Point
+  | GeneratedWord String
   | Clear
   | Leave
   | Tick Int
@@ -60,6 +73,7 @@ init _ =
   , pendingTicks = 30
   , pointer = Nothing
   , status = StandBy
+  , word = Nothing
   }, NoEff)
 
 -- View
@@ -76,21 +90,21 @@ renderables currentPoint {lastPoint} =
 
 view : Model -> H.Html Msg
 view model =
-  case model.status of
-    Started -> startView model
+  case (model.word, model.status) of
+    (Just word, Started) -> startView word model
     _ -> standByView
 
 standByView : H.Html Msg
 standByView =
   H.div
   []
-  [ H.div [] [ H.h1 [][H.text"Draw Me"] ]
+  [ H.div [] [ H.h1 [][ H.text "Draw Me" ] ]
   , H.div [] [ H.button [ HE.onClick Start ][H.text"Start"] ]
   , H.div [] [ H.button [ HE.onClick Join ][H.text"Join"] ]
   ]
 
-startView : Model -> H.Html Msg
-startView ({ currentPoint, mode } as model) =
+startView : String -> Model -> H.Html Msg
+startView word ({ currentPoint } as model) =
   H.div
     [ HA.style "display" "flex"
     , HA.style "flex-direction" "column"
@@ -98,8 +112,7 @@ startView ({ currentPoint, mode } as model) =
     , HA.style "height" "500px"
     , HA.style "border" "1px solid black"
     ]
-    [
-      C.toHtml
+    [ C.toHtml
         (500, 500)
         [ M.onDown (.offsetPos >> StartAt)
         , M.onUp (.offsetPos >> EndAt)
@@ -116,6 +129,11 @@ startView ({ currentPoint, mode } as model) =
                      ] (renderables currentPoint pointer)
                 _ -> C.shapes [] []
         ]
+    , H.div
+      []
+      [ H.span [][ H.text "Draw me a: " ]
+      , H.span [][ H.text word ]
+      ]
     , H.div
         []
         [ H.button [ HE.onClick Clear ][ H.text "Clear" ]
@@ -153,12 +171,14 @@ update msg model =
         then model
         else { model | mode = Cleared }
     Leave -> init ()
-    Start -> noCmd { model | status = Started }
+    Start -> ({ model | status = Started }, GenWord)
     Join -> noCmd model
-    Tick milis ->
+    Tick _ ->
         if model.pendingTicks > 0
         then noCmd { model | pendingTicks = model.pendingTicks - 1 }
         else noCmd { model | pendingTicks = 0, mode = Blocked }
+    GeneratedWord word ->
+      noCmd { model | word = Just word }
 
 
 drawPoint newPoint { previousMidPoint, lastPoint } model =

@@ -1,19 +1,17 @@
 module Example exposing (..)
 
-import Expect exposing (Expectation)
-import Fuzz exposing (Fuzzer, int, list, string)
 import Test exposing (..)
-import Main exposing (Eff(..), Model, Msg(..), init, view, update, subscriptions)
+import Main exposing (Eff(..), Model, Msg(..), init, view, update)
 import Test.Html.Selector exposing (text)
 import ProgramTest as PT
 import Debug
 import SimulatedEffect.Cmd as SCmd
-import SimulatedEffect.Sub as SSub
 
 simulatedCmd : Eff -> PT.SimulatedEffect Msg
 simulatedCmd eff =
   case eff of
     NoEff -> SCmd.none
+    GenWord -> SCmd.none
 
 simulatedSub : Model -> PT.SimulatedSub Msg
 simulatedSub _ = Debug.todo "wait for simulated Time.every"
@@ -47,6 +45,7 @@ startPage =
         \_ ->
           start
           |> PT.clickButton "Start"
+          |> PT.update (GeneratedWord "Hat")
           |> PT.expectViewHas
              [ text "Pending ticks: 30" ]
     , describe "and clicks on leave"
@@ -54,6 +53,7 @@ startPage =
           \_ ->
              start
              |> PT.clickButton "Start"
+             |> PT.update (GeneratedWord "Hat")
              |> PT.clickButton "Leave"
              |> PT.expectViewHas
                 [ text "Draw Me"
@@ -65,9 +65,17 @@ startPage =
           \_ ->
              start
              |> PT.clickButton "Start"
+             |> PT.update (GeneratedWord "Hat")
              |> PT.advanceTime (60 * second)
              |> PT.expectViewHas
                 [ text "Game over" ]
       ]
+    , test "shows generated word" <|
+        \_ ->
+           start
+           |> PT.clickButton "Start"
+           |> PT.update (GeneratedWord "Hat")
+           |> PT.expectViewHas
+              [ text "Hat" ]
     ]
   ]
