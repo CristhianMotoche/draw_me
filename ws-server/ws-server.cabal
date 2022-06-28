@@ -1,0 +1,14 @@
+cabal-version:      2.4
+name:               ws-server
+version:            0.1.0.0
+author:             CristhianMotoche
+maintainer:         cristhian.motoche@gmail.com
+
+extra-source-files: CHANGELOG.md
+
+executable ws-server
+    main-is:          Main.hs
+    build-depends:    base ^>=4.14.3.0,
+                      websockets >= 0.12.7 && < 0.12.8
+    hs-source-dirs:   app
+    default-language: Haskell2010
