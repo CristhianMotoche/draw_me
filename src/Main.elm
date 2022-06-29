@@ -1,4 +1,4 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Browser
 import Canvas as C
@@ -12,8 +12,13 @@ import Html.Events as HE
 import Random as R
 import Color
 
+-- JavaScript usage: app.ports.websocketIn.send(response);
+port websocketIn : (String -> msg) -> Sub msg
+-- JavaScript usage: app.ports.websocketOut.subscribe(handler);
+port websocketOut : String -> Cmd msg
+
 type Eff =
-   NoEff | GenWord
+   NoEff | GenWord | WSOut String
 
 
 words : List String
@@ -30,6 +35,7 @@ run eff =
   case eff of
     NoEff -> Cmd.none
     GenWord -> R.generate GeneratedWord <| R.uniform "Hat" words
+    WSOut value -> websocketOut value
 
 type PaintMode
   = Enabled
@@ -60,6 +66,7 @@ type Msg
   | EndAt C.Point
   | LeaveAt C.Point
   | GeneratedWord String
+  | Incoming String
   | Clear
   | Leave
   | Tick Int
@@ -147,17 +154,28 @@ startView word ({ currentPoint } as model) =
 noCmd : Model -> (Model, Eff)
 noCmd m = (m, NoEff)
 
+pointToString : C.Point -> String
+pointToString (x, y) = String.fromFloat x ++ "," ++ String.fromFloat y
+
 update : Msg -> Model -> (Model, Eff)
 update msg model =
   case msg of
-    StartAt point -> noCmd <|
+    StartAt point ->
         if model.mode == Blocked
-        then model
-        else { model | mode = Enabled, currentPoint = point, pointer = Just { lastPoint = point, previousMidPoint = point }}
-    EndAt point -> noCmd <|
+        then noCmd model
+        else ({ model |
+                mode = Enabled,
+                currentPoint = point,
+                pointer = Just { lastPoint = point, previousMidPoint = point }}
+              , WSOut <| pointToString point
+              )
+    EndAt point ->
         if model.mode == Blocked
-        then model
-        else { model | mode = Disabled, currentPoint = point, pointer = Nothing }
+        then  noCmd model
+        else ({ model |
+                  mode = Disabled,
+                  currentPoint = point, pointer = Nothing}
+             , WSOut <| pointToString point )
     MoveAt point -> noCmd <|
         case model.pointer of
           Just pointer -> drawPoint point pointer model
@@ -179,9 +197,12 @@ update msg model =
         else noCmd { model | pendingTicks = 0, mode = Blocked }
     GeneratedWord word ->
       noCmd { model | word = Just word }
+    Incoming value ->
+      Debug.log value
+      noCmd model
 
 
-drawPoint newPoint { previousMidPoint, lastPoint } model =
+drawPoint newPoint { lastPoint } model =
   let newMidPoint = controlPoint lastPoint newPoint
   in { model | pointer = Just { previousMidPoint = newMidPoint, lastPoint = model.currentPoint }, currentPoint = newPoint}
 
@@ -196,10 +217,12 @@ toggle m =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if model.mode == Blocked
+  Sub.batch
+  [ if model.mode == Blocked
     then Sub.none
     else every 1000 (posixToMillis >> Tick)
-
+  , websocketIn Incoming
+  ]
 -- Main
 
 main : Program () Model Msg

@@ -11,7 +11,14 @@
     <script src="https://unpkg.com/elm-canvas@2.2/elm-canvas.js"></script>
     <script>
       const appNode = document.getElementById("app");
-      Elm.Main.init({ node: appNode });
+      var app = Elm.Main.init({ node: appNode });
+      var ws = new WebSocket("ws://localhost:9160");
+      ws.onmessage = function(message)
+      {
+          console.log(message);
+          app.ports.websocketIn.send(message.data);
+      };
+      app.ports.websocketOut.subscribe(function(msg) { ws.send(msg); });
     </script>
   </body>
 </html>
