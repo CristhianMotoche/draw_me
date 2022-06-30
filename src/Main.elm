@@ -35,7 +35,7 @@ run eff =
   case eff of
     NoEff -> Cmd.none
     GenWord -> R.generate GeneratedWord <| R.uniform "Hat" words
-    WSOut value -> websocketOut value
+    WSOut value -> Cmd.map (\_ -> Outgoing value) (websocketOut value)
 
 type PaintMode
   = Enabled
@@ -67,6 +67,7 @@ type Msg
   | LeaveAt C.Point
   | GeneratedWord String
   | Incoming String
+  | Outgoing String
   | Clear
   | Leave
   | Tick Int
@@ -190,17 +191,19 @@ update msg model =
         else { model | mode = Cleared }
     Leave -> init ()
     Start -> ({ model | status = Started }, GenWord)
-    Join -> noCmd model
+    Join -> (model, WSOut "guesser")
     Tick _ ->
         if model.pendingTicks > 0
         then noCmd { model | pendingTicks = model.pendingTicks - 1 }
         else noCmd { model | pendingTicks = 0, mode = Blocked }
     GeneratedWord word ->
-      noCmd { model | word = Just word }
+      ({ model | word = Just word }, WSOut "drawer")
     Incoming value ->
       Debug.log value
       noCmd model
-
+    Outgoing value ->
+      Debug.log value
+      noCmd model
 
 drawPoint newPoint { lastPoint } model =
   let newMidPoint = controlPoint lastPoint newPoint
