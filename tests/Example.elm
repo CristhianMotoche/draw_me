@@ -12,6 +12,7 @@ simulatedCmd eff =
   case eff of
     NoEff -> SCmd.none
     GenWord -> SCmd.none
+    WSOut _ -> SCmd.none
 
 simulatedSub : Model -> PT.SimulatedSub Msg
 simulatedSub _ = Debug.todo "wait for simulated Time.every"

@@ -12,13 +12,18 @@
     <script>
       const appNode = document.getElementById("app");
       var app = Elm.Main.init({ node: appNode });
-      var ws = new WebSocket("ws://localhost:9160");
-      ws.onmessage = function(message)
-      {
-          console.log(message);
-          app.ports.websocketIn.send(message.data);
+      const setUpPorts = (ports) => {
+        var ws = new WebSocket("ws://localhost:9160");
+
+        ports.websocketOut.subscribe(function(msg) {
+          ws.send(msg);
+        });
+
+        ws.onmessage = function(message) {
+          ports.websocketIn.send(message.data);
+        };
       };
-      app.ports.websocketOut.subscribe(function(msg) { ws.send(msg); });
+      setUpPorts(app.ports);
     </script>
   </body>
 </html>

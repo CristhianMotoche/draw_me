@@ -158,6 +158,15 @@ noCmd m = (m, NoEff)
 pointToString : C.Point -> String
 pointToString (x, y) = String.fromFloat x ++ "," ++ String.fromFloat y
 
+pointFromString : String -> Maybe C.Point
+pointFromString strPoint =
+  case String.split "," strPoint of
+    xStr :: yStr :: [] ->
+      case (String.toFloat xStr, String.toFloat yStr) of
+          (Just x, Just y) -> Just (x, y)
+          _ -> Nothing
+    _ -> Nothing
+
 update : Msg -> Model -> (Model, Eff)
 update msg model =
   case msg of
@@ -177,10 +186,11 @@ update msg model =
                   mode = Disabled,
                   currentPoint = point, pointer = Nothing}
              , WSOut <| pointToString point )
-    MoveAt point -> noCmd <|
+    MoveAt point ->
         case model.pointer of
-          Just pointer -> drawPoint point pointer model
-          _ -> model
+          Just pointer ->
+            (drawPoint point pointer model, WSOut <| pointToString point)
+          _ -> noCmd model
     LeaveAt point -> noCmd <|
         if model.mode == Blocked
         then model
