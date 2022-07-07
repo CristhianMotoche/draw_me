@@ -78,7 +78,7 @@ init : flags -> (Model, Eff)
 init _ =
   ({ currentPoint = ( 0, 0 )
   , mode = Cleared
-  , pendingTicks = 30
+  , pendingTicks = 100
   , pointer = Nothing
   , status = StandBy
   , word = Nothing
@@ -100,6 +100,7 @@ view : Model -> H.Html Msg
 view model =
   case (model.word, model.status) of
     (Just word, Started) -> startView word model
+    (_, Joined) -> joinView model
     _ -> standByView
 
 standByView : H.Html Msg
@@ -150,6 +151,38 @@ startView word ({ currentPoint } as model) =
         ]
     ]
 
+joinView : Model -> H.Html Msg
+joinView ({ currentPoint } as model) =
+  H.div
+    [ HA.style "display" "flex"
+    , HA.style "flex-direction" "column"
+    , HA.style "width" "500px"
+    , HA.style "height" "500px"
+    , HA.style "border" "1px solid black"
+    ]
+    [ C.toHtml
+        (500, 500)
+        []
+        [ case (model.mode, model.pointer) of
+                (_, Just pointer) ->
+                  C.shapes
+                     [ CSL.lineCap CSL.RoundCap
+                     , CSL.lineWidth 3
+                     , CS.stroke (Color.rgb255 100 100 10)
+                     ] (renderables currentPoint pointer)
+                _ -> C.shapes [] []
+        ]
+    , H.div
+      []
+      [ H.span [][ H.text "What is that?" ]
+      ]
+    , H.div
+        []
+        [ H.button [ HE.onClick Leave ][ H.text "Leave" ]
+        , H.p [][ H.text <| "Pending ticks: " ++ String.fromInt model.pendingTicks ]
+        ]
+    ]
+
 -- Update
 
 noCmd : Model -> (Model, Eff)
@@ -157,6 +190,40 @@ noCmd m = (m, NoEff)
 
 pointToString : C.Point -> String
 pointToString (x, y) = String.fromFloat x ++ "," ++ String.fromFloat y
+
+type Step
+  = StartStep
+  | Move
+  | End
+
+stepToString : Step -> String
+stepToString step =
+  case step of
+    StartStep -> "S"
+    Move -> "M"
+    End -> "E"
+
+stepFromStr : String -> Maybe Step
+stepFromStr step =
+  case step of
+    "S" -> Just StartStep
+    "M" -> Just Move
+    "E" -> Just End
+    _ -> Nothing
+
+pointWithModeToString : Step -> C.Point -> String
+pointWithModeToString step point =
+  stepToString step ++ "," ++ pointToString point
+
+
+pointWithModeFromString : String -> Maybe (Step, C.Point)
+pointWithModeFromString str =
+  case String.split "," str of
+      sStr :: rest ->
+        case (stepFromStr sStr, pointFromString (String.join "," rest)) of
+            (Just step, Just point) -> Just (step, point)
+            _ -> Nothing
+      _ -> Nothing
 
 pointFromString : String -> Maybe C.Point
 pointFromString strPoint =
@@ -177,7 +244,7 @@ update msg model =
                 mode = Enabled,
                 currentPoint = point,
                 pointer = Just { lastPoint = point, previousMidPoint = point }}
-              , WSOut <| pointToString point
+              , WSOut <| pointWithModeToString StartStep point
               )
     EndAt point ->
         if model.mode == Blocked
@@ -185,11 +252,12 @@ update msg model =
         else ({ model |
                   mode = Disabled,
                   currentPoint = point, pointer = Nothing}
-             , WSOut <| pointToString point )
+             , WSOut <| pointWithModeToString End point )
     MoveAt point ->
         case model.pointer of
           Just pointer ->
-            (drawPoint point pointer model, WSOut <| pointToString point)
+            (drawPoint point pointer model
+            , WSOut <| pointWithModeToString Move point)
           _ -> noCmd model
     LeaveAt point -> noCmd <|
         if model.mode == Blocked
@@ -201,7 +269,7 @@ update msg model =
         else { model | mode = Cleared }
     Leave -> init ()
     Start -> ({ model | status = Started }, GenWord)
-    Join -> (model, WSOut "guesser")
+    Join -> ({ model | status = Joined }, WSOut "guesser")
     Tick _ ->
         if model.pendingTicks > 0
         then noCmd { model | pendingTicks = model.pendingTicks - 1 }
@@ -209,15 +277,41 @@ update msg model =
     GeneratedWord word ->
       ({ model | word = Just word }, WSOut "drawer")
     Incoming value ->
-      Debug.log value
-      noCmd model
+      case pointWithModeFromString <| Debug.log "V" value of
+          Just (StartStep, point) ->
+            ({ model
+              | currentPoint = point
+              , pointer = Just { lastPoint = point, previousMidPoint = point }}
+              , NoEff
+              )
+          Just (End, point) ->
+            ({ model
+              | currentPoint = point
+              , pointer = Nothing }
+              , NoEff
+              )
+          Just (Move, point) ->
+            case model.pointer of
+              Just pointer ->
+                (drawPoint point pointer model
+                , NoEff)
+              _ -> noCmd model
+          _ -> noCmd model
     Outgoing value ->
       Debug.log value
       noCmd model
 
+drawPoint : C.Point -> DrawingPointer -> Model -> Model
 drawPoint newPoint { lastPoint } model =
   let newMidPoint = controlPoint lastPoint newPoint
-  in { model | pointer = Just { previousMidPoint = newMidPoint, lastPoint = model.currentPoint }, currentPoint = newPoint}
+  in { model
+     | pointer =
+        Just
+          { previousMidPoint = newMidPoint
+          , lastPoint = model.currentPoint
+          }
+     , currentPoint = newPoint
+     }
 
 toggle : PaintMode -> PaintMode
 toggle m =
