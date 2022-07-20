@@ -41,6 +41,8 @@ application varState pending = do
   `catch` \e -> do
     state <- readMVar varState
     handleClose state e
+    nState <- newMVar newState
+    application nState pending
 
 handleClose (State { drawer = Just dConn })  WS.ConnectionClosed = WS.sendClose dConn ("" :: Text)
 handleClose (State { guesser = Just gConn }) WS.ConnectionClosed  = WS.sendClose gConn ("" :: Text)
