@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
-
 import           Control.Concurrent (MVar, modifyMVar_, newMVar, readMVar)
+import           Control.Exception  (catch)
 import           Control.Monad      (forever)
+import           Data.Text          (Text)
 import qualified Network.WebSockets as WS
 
 data State = State
@@ -37,6 +38,14 @@ application varState pending = do
             WS.sendDataMessage gConn dm
             return state
         _ -> return $ addPlayer conn dm state
+  `catch` \e -> do
+    state <- readMVar varState
+    handleClose state e
+
+handleClose (State { drawer = Just dConn })  WS.ConnectionClosed = WS.sendClose dConn ("" :: Text)
+handleClose (State { guesser = Just gConn }) WS.ConnectionClosed  = WS.sendClose gConn ("" :: Text)
+handleClose _                     WS.ConnectionClosed = return ()
+handleClose _                     _ = return ()
 
 main :: IO ()
 main = do
