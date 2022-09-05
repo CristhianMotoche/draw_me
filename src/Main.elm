@@ -35,7 +35,9 @@ run eff =
   case eff of
     NoEff -> Cmd.none
     GenWord -> R.generate GeneratedWord <| R.uniform "Hat" words
-    WSOut value -> Cmd.map (\_ -> Outgoing value) (websocketOut value)
+    WSOut value ->
+      let _ = Debug.log "VO" value
+      in Cmd.map (\_ -> Outgoing value) (websocketOut value)
 
 type PaintMode
   = Enabled
@@ -277,7 +279,7 @@ update msg model =
     GeneratedWord word ->
       ({ model | word = Just word }, WSOut "drawer")
     Incoming value ->
-      case pointWithModeFromString <| Debug.log "V" value of
+      case pointWithModeFromString <| Debug.log "VI" value of
           Just (StartStep, point) ->
             ({ model
               | currentPoint = point
@@ -297,9 +299,7 @@ update msg model =
                 , NoEff)
               _ -> noCmd model
           _ -> noCmd model
-    Outgoing value ->
-      Debug.log value
-      noCmd model
+    Outgoing _ -> noCmd model
 
 drawPoint : C.Point -> DrawingPointer -> Model -> Model
 drawPoint newPoint { lastPoint } model =

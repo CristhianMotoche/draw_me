@@ -12,6 +12,11 @@ data State = State
   , guesser :: Maybe WS.Connection
   }
 
+stateToStr (State { drawer = Just _, guesser = Just _ })   = "Full has both"
+stateToStr (State { drawer = Just _, guesser = Nothing })  = "Missing guesser"
+stateToStr (State { drawer = Nothing, guesser = Just _ })  = "Missing drawer"
+stateToStr (State { drawer = Nothing, guesser = Nothing }) = "Missing both"
+
 newState :: State
 newState = State { drawer = Nothing, guesser = Nothing  }
 
@@ -31,10 +36,13 @@ application varState pending = do
     dm <- WS.receiveDataMessage conn
     print dm
     state <- readMVar varState
+    print (stateToStr state)
     modifyMVar_ varState $ \state ->
       case state of
         State { drawer = Just dConn, guesser = Just gConn } -> do
-            dm <- WS.receiveDataMessage dConn
+            -- dm <- WS.receiveDataMessage dConn
+            -- print "2:"
+            -- print dm
             WS.sendDataMessage gConn dm
             return state
         _ -> return $ addPlayer conn dm state
