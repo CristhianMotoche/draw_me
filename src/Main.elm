@@ -58,6 +58,7 @@ type alias Model =
   , mode : PaintMode
   , pendingTicks : Int
   , pointer : Maybe DrawingPointer
+  , selectedWord : Maybe String
   , status : Status
   , word : Maybe String
   }
@@ -72,6 +73,8 @@ type Msg
   | Outgoing String
   | Clear
   | Leave
+  | SendSelected
+  | Select String
   | Tick Int
   | Start
   | Join
@@ -82,6 +85,7 @@ init _ =
   , mode = Cleared
   , pendingTicks = 100
   , pointer = Nothing
+  , selectedWord = Nothing
   , status = StandBy
   , word = Nothing
   }, NoEff)
@@ -180,10 +184,31 @@ joinView ({ currentPoint } as model) =
       ]
     , H.div
         []
-        [ H.button [ HE.onClick Leave ][ H.text "Leave" ]
+        [ H.div
+            []
+            [ H.select [] (List.map toOption words)
+            , H.button
+                [ HE.onClick SendSelected
+                , HA.disabled (not <| isJust model.selectedWord)
+                ]
+                [ H.text "Send" ]
+            ]
+        , H.button [ HE.onClick Leave ][ H.text "Leave" ]
         , H.p [][ H.text <| "Pending ticks: " ++ String.fromInt model.pendingTicks ]
         ]
     ]
+
+isJust : Maybe a -> Bool
+isJust mb =
+  case mb of
+      Just _ -> True
+      _ -> False
+
+toOption : String -> H.Html Msg
+toOption word =
+  H.option
+    [ HE.onClick (Select word) ]
+    [ H.text word ]
 
 -- Update
 
@@ -270,6 +295,11 @@ update msg model =
         then model
         else { model | mode = Cleared }
     Leave -> init ()
+    Select word -> noCmd <| { model | selectedWord = Just word }
+    SendSelected ->
+      case model.selectedWord of
+          Just word -> (model, WSOut <| "g:" ++ word)
+          Nothing -> noCmd model
     Start -> ({ model | status = Started }, GenWord)
     Join -> ({ model | status = Joined }, WSOut "guesser")
     Tick _ ->
