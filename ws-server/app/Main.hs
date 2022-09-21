@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
-import           Control.Concurrent (MVar, modifyMVar_, newMVar, readMVar)
-import           Control.Exception  (catch)
-import           Control.Monad      (forever)
-import           Data.Text          (Text)
-import qualified Network.WebSockets as WS
+import           Control.Concurrent   (MVar, modifyMVar_, newMVar, readMVar)
+import           Control.Exception    (catch)
+import           Control.Monad        (forever)
+import qualified Data.ByteString.Lazy as BL
+import           Data.Text            (Text)
+import qualified Network.WebSockets   as WS
 
 data State = State
   { drawer  :: Maybe WS.Connection
@@ -29,6 +30,16 @@ addPlayer conn (WS.Text "drawer" _) state  = state { drawer = Just conn }
 addPlayer conn (WS.Text "guesser" _) state = state { guesser = Just conn }
 addPlayer conn _ state                     = state
 
+data MsgTo = ToGuesser | ToDrawer
+
+parseMsgTo :: WS.DataMessage -> MsgTo
+parseMsgTo (WS.Text msg _) =
+  if "g:" `BL.isPrefixOf` msg
+  then ToDrawer
+  else ToGuesser
+parseMsgTo _ = ToGuesser
+
+
 application :: MVar State -> WS.ServerApp
 application varState pending = do
   conn <- WS.acceptRequest pending
@@ -43,7 +54,9 @@ application varState pending = do
             -- dm <- WS.receiveDataMessage dConn
             -- print "2:"
             -- print dm
-            WS.sendDataMessage gConn dm
+            case parseMsgTo dm of
+              ToDrawer  -> WS.sendDataMessage dConn dm
+              ToGuesser -> WS.sendDataMessage gConn dm
             return state
         _ -> return $ addPlayer conn dm state
   `catch` \e -> do

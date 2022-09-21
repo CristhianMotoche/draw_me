@@ -48,9 +48,12 @@ type PaintMode
 type alias DrawingPointer =
   { previousMidPoint : C.Point, lastPoint : C.Point }
 
+type GameResult = Win | Lose
+
 type Status =
   StandBy
   | Started
+  | GameOver GameResult
   | Joined
 
 type alias Model =
@@ -106,6 +109,7 @@ view : Model -> H.Html Msg
 view model =
   case (model.word, model.status) of
     (Just word, Started) -> startView word model
+    (_, GameOver result) -> gameResultView result
     (_, Joined) -> joinView model
     _ -> standByView
 
@@ -117,6 +121,32 @@ standByView =
   , H.div [] [ H.button [ HE.onClick Start ][H.text"Start"] ]
   , H.div [] [ H.button [ HE.onClick Join ][H.text"Join"] ]
   ]
+
+gameResultView : GameResult -> H.Html Msg
+gameResultView result =
+  H.div
+  []
+  [ H.div [] [ H.h1 [][ H.text <| presentResult result ] ]
+  ]
+
+presentResult : GameResult -> String
+presentResult gr =
+  case gr of
+      Win -> "You nailed it!"
+      _ -> "Better luck next time"
+
+resultToString : GameResult -> String
+resultToString gr =
+  case gr of
+      Win -> "Win"
+      _ -> "Lose"
+
+resultFromString : String -> Maybe GameResult
+resultFromString str =
+  case str of
+      "Win" -> Just Win
+      "Lose" -> Just Lose
+      _ -> Nothing
 
 startView : String -> Model -> H.Html Msg
 startView word ({ currentPoint } as model) =
@@ -238,6 +268,20 @@ stepFromStr step =
     "E" -> Just End
     _ -> Nothing
 
+type GameGuess
+  = GuessedWord String
+  | Winner
+  | Loser
+  | Unknown
+
+guessedWordFromString : String -> GameGuess
+guessedWordFromString str =
+  case (resultFromString str, String.split ":" str) of
+      (Just Win, _) -> Winner
+      (Just Lose, _) -> Loser
+      (_, _ :: word) -> GuessedWord <| String.concat word
+      _ -> Unknown
+
 pointWithModeToString : Step -> C.Point -> String
 pointWithModeToString step point =
   stepToString step ++ "," ++ pointToString point
@@ -328,7 +372,24 @@ update msg model =
                 (drawPoint point pointer model
                 , NoEff)
               _ -> noCmd model
-          _ -> noCmd model
+          _ ->
+            case guessedWordFromString value of
+                GuessedWord word ->
+                  let
+                     gameResult =
+                       if Just word == model.word
+                       then Win
+                       else Lose
+                     textResult = resultToString gameResult
+                  in
+                     ({ model | status = GameOver gameResult }, WSOut textResult)
+                Winner ->
+                  noCmd
+                     ({ model | status = GameOver Win })
+                Loser ->
+                  noCmd
+                     ({ model | status = GameOver Lose })
+                _ -> noCmd model
     Outgoing _ -> noCmd model
 
 drawPoint : C.Point -> DrawingPointer -> Model -> Model
